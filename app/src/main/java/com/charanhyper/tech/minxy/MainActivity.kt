@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
                 when (screen) {
                     Screen.HOME -> HomeScreen(
                         onOpenDrawer = { screen = Screen.DRAWER },
-                        onOpenSettings = { screen = Screen.HIDDEN_APPS }
+                        onOpenHiddenApps = { screen = Screen.HIDDEN_APPS }
                     )
                     Screen.DRAWER -> AppDrawer(
                         viewModel = vm,

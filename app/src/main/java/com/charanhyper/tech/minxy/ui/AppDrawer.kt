@@ -1,17 +1,20 @@
 package com.charanhyper.tech.minxy.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.charanhyper.tech.minxy.AppInfo
 import com.charanhyper.tech.minxy.AppViewModel
+import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
 fun AppDrawer(
@@ -141,19 +145,31 @@ private fun AppItem(
     var showMenu by remember { mutableStateOf(false) }
 
     Box {
-        Text(
-            text = app.name,
-            color = Color(0xFFE0E0E0),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Light,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = { showMenu = true }
                 )
-                .padding(vertical = 13.dp)
-        )
+                .padding(vertical = 10.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            app.icon?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = app.name,
+                    modifier = Modifier.size(38.dp)
+                )
+                Spacer(Modifier.width(14.dp))
+            }
+            Text(
+                text = app.name,
+                color = Color(0xFFE0E0E0),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Light
+            )
+        }
 
         DropdownMenu(
             expanded = showMenu,

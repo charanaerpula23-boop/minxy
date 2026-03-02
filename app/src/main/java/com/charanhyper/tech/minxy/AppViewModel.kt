@@ -3,6 +3,10 @@ package com.charanhyper.tech.minxy
 import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,12 +66,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         return pm.queryIntentActivities(intent, PackageManager.GET_META_DATA)
             .map { ri ->
+                val icon = try { drawableToBitmap(pm.getApplicationIcon(ri.activityInfo.packageName)) } catch (_: Exception) { null }
                 AppInfo(
                     name = ri.loadLabel(pm).toString(),
-                    packageName = ri.activityInfo.packageName
+                    packageName = ri.activityInfo.packageName,
+                    icon = icon
                 )
             }
             .filter { it.packageName != "com.charanhyper.tech.minxy" }
             .sortedBy { it.name.lowercase() }
     }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable) return drawable.bitmap
+        val w = drawable.intrinsicWidth.coerceAtLeast(1)
+        val h = drawable.intrinsicHeight.coerceAtLeast(1)
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bmp
+    }
 }
+
