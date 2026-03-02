@@ -13,9 +13,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.charanhyper.tech.minxy.ui.AppDrawer
 import com.charanhyper.tech.minxy.ui.HiddenAppsScreen
 import com.charanhyper.tech.minxy.ui.HomeScreen
+import com.charanhyper.tech.minxy.ui.IconPacksScreen
 import com.charanhyper.tech.minxy.ui.theme.MinxyTheme
 
-enum class Screen { HOME, DRAWER, HIDDEN_APPS }
+enum class Screen { HOME, DRAWER, HIDDEN_APPS, ICON_PACKS }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,19 +28,24 @@ class MainActivity : ComponentActivity() {
                 var screen by remember { mutableStateOf(Screen.HOME) }
 
                 BackHandler(enabled = screen != Screen.HOME) {
-                    screen = Screen.HOME
+                    screen = if (screen == Screen.DRAWER) Screen.HOME else Screen.HOME
                 }
 
                 when (screen) {
                     Screen.HOME -> HomeScreen(
                         onOpenDrawer = { screen = Screen.DRAWER },
-                        onOpenHiddenApps = { screen = Screen.HIDDEN_APPS }
+                        onOpenHiddenApps = { screen = Screen.HIDDEN_APPS },
+                        onOpenIconPacks = { screen = Screen.ICON_PACKS }
                     )
                     Screen.DRAWER -> AppDrawer(
                         viewModel = vm,
                         onClose = { screen = Screen.HOME }
                     )
                     Screen.HIDDEN_APPS -> HiddenAppsScreen(
+                        viewModel = vm,
+                        onClose = { screen = Screen.HOME }
+                    )
+                    Screen.ICON_PACKS -> IconPacksScreen(
                         viewModel = vm,
                         onClose = { screen = Screen.HOME }
                     )

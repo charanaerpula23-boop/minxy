@@ -1,5 +1,8 @@
 package com.charanhyper.tech.minxy.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -50,6 +53,16 @@ fun AppDrawer(
 ) {
     val apps by viewModel.visibleApps.collectAsState()
     val query by viewModel.searchQuery.collectAsState()
+    val iconOverrides by viewModel.iconOverrides.collectAsState()
+
+    var pendingIconPkg by remember { mutableStateOf<String?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        val pkg = pendingIconPkg
+        if (uri != null && pkg != null) viewModel.setAppIcon(pkg, uri)
+        pendingIconPkg = null
+    }
 
     Box(
         modifier = Modifier
@@ -126,8 +139,14 @@ fun AppDrawer(
                 items(apps, key = { it.packageName }) { app ->
                     AppItem(
                         app = app,
+                        hasOverride = iconOverrides.containsKey(app.packageName),
                         onClick = { viewModel.launchApp(app.packageName) },
-                        onHide = { viewModel.hideApp(app.packageName) }
+                        onHide = { viewModel.hideApp(app.packageName) },
+                        onChangeIcon = {
+                            pendingIconPkg = app.packageName
+                            imagePicker.launch(arrayOf("image/*"))
+                        },
+                        onResetIcon = { viewModel.clearAppIcon(app.packageName) }
                     )
                 }
             }
@@ -139,8 +158,11 @@ fun AppDrawer(
 @Composable
 private fun AppItem(
     app: AppInfo,
+    hasOverride: Boolean,
     onClick: () -> Unit,
-    onHide: () -> Unit
+    onHide: () -> Unit,
+    onChangeIcon: () -> Unit,
+    onResetIcon: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -177,18 +199,19 @@ private fun AppItem(
             modifier = Modifier.background(Color(0xFF1C1C1C))
         ) {
             DropdownMenuItem(
-                text = {
-                    Text(
-                        "Hide App",
-                        color = Color(0xFFCCCCCC),
-                        fontSize = 14.sp
-                    )
-                },
-                onClick = {
-                    showMenu = false
-                    onHide()
-                }
+                text = { Text("Hide App", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
+                onClick = { showMenu = false; onHide() }
             )
+            DropdownMenuItem(
+                text = { Text("Change Icon", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
+                onClick = { showMenu = false; onChangeIcon() }
+            )
+            if (hasOverride) {
+                DropdownMenuItem(
+                    text = { Text("Reset Icon", color = Color(0xFF777777), fontSize = 14.sp) },
+                    onClick = { showMenu = false; onResetIcon() }
+                )
+            }
         }
     }
 }

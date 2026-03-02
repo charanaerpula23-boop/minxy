@@ -42,7 +42,8 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onOpenDrawer: () -> Unit,
-    onOpenHiddenApps: () -> Unit
+    onOpenHiddenApps: () -> Unit,
+    onOpenIconPacks: () -> Unit
 ) {
     val context = LocalContext.current
     var currentTime by remember { mutableStateOf(getTime()) }
@@ -131,6 +132,10 @@ fun HomeScreen(
                 onDismissRequest = { menuExpanded = false },
                 modifier = Modifier.background(Color(0xFF111111))
             ) {
+                DropdownMenuItem(
+                    text = { Text("Icon Packs", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
+                    onClick = { menuExpanded = false; onOpenIconPacks() }
+                )
                 DropdownMenuItem(
                     text = { Text("Hidden Apps", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
                     onClick = { menuExpanded = false; onOpenHiddenApps() }
