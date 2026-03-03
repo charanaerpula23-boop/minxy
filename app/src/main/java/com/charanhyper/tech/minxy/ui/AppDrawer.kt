@@ -3,9 +3,6 @@ package com.charanhyper.tech.minxy.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -46,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +60,7 @@ import com.charanhyper.tech.minxy.AppViewModel
 fun AppDrawer(
     viewModel: AppViewModel,
     onOpenSettings: () -> Unit,
+    onOpenWidgetPicker: () -> Unit,
     onClose: () -> Unit
 ) {
     val apps by viewModel.visibleApps.collectAsState()
@@ -109,18 +110,16 @@ fun AppDrawer(
                 )
             }
 
-            // ── search bar (pill-shaped, Material You style) ──
+            // ── search bar (compact pill) ──
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(28.dp))
+                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
                     .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🔍", fontSize = 16.sp, modifier = Modifier.padding(end = 12.dp))
-
                 Box(modifier = Modifier.weight(1f)) {
                     BasicTextField(
                         value = query,
@@ -129,16 +128,16 @@ fun AppDrawer(
                         singleLine = true,
                         textStyle = TextStyle(
                             color = Color.White,
-                            fontSize = 16.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Normal
                         ),
                         cursorBrush = SolidColor(Color.White.copy(alpha = 0.6f)),
                         decorationBox = { inner ->
                             if (query.isEmpty()) {
                                 Text(
-                                    "Search apps",
+                                    "Search apps…",
                                     color = Color.White.copy(alpha = 0.35f),
-                                    fontSize = 16.sp
+                                    fontSize = 15.sp
                                 )
                             }
                             inner()
@@ -162,6 +161,12 @@ fun AppDrawer(
                     ) {
                         DropdownMenuItem(
                             text = {
+                                Text("Widgets", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp)
+                            },
+                            onClick = { menuExpanded = false; onOpenWidgetPicker() }
+                        )
+                        DropdownMenuItem(
+                            text = {
                                 Text("Settings", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp)
                             },
                             onClick = { menuExpanded = false; onOpenSettings() }
@@ -171,21 +176,24 @@ fun AppDrawer(
             }
 
             // ── app grid ──
-            AnimatedVisibility(
-                visible = apps.isNotEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
+            if (apps.isNotEmpty()) {
+                val gridState = rememberLazyGridState()
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns),
+                    state = gridState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 12.dp),
+                        .padding(horizontal = 12.dp)
+                        .graphicsLayer { },
                     contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    items(apps, key = { it.packageName }) { app ->
+                    items(
+                        items = apps,
+                        key = { it.packageName },
+                        contentType = { "app_item" }
+                    ) { app ->
                         GridAppItem(
                             app = app,
                             iconSizeDp = iconSize,

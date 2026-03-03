@@ -1,10 +1,13 @@
 package com.charanhyper.tech.minxy.ui
 
+import android.appwidget.AppWidgetHost
+import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.widget.FrameLayout
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -49,6 +53,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,7 +61,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.charanhyper.tech.minxy.AppViewModel
+import com.charanhyper.tech.minxy.MainActivity
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -76,6 +83,8 @@ fun HomeScreen(
     var secretTapCount by remember { mutableIntStateOf(0) }
 
     val homeApps by viewModel.homeApps.collectAsState(initial = emptyList())
+    val widgetIds by viewModel.widgetIds.collectAsState()
+    val activity = context as? MainActivity
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -136,57 +145,81 @@ fun HomeScreen(
                 }
         )
 
-        // clock widget — centered vertically like Pixel launcher
-        Column(
+        // clock + widgets — scrollable center area
+        LazyColumn(
             modifier = Modifier
-                .align(Alignment.Center)
-                .padding(bottom = if (homeApps.isNotEmpty()) 100.dp else 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(
+                    bottom = if (homeApps.isNotEmpty()) 120.dp else 60.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            Text(
-                text = currentTime,
-                style = TextStyle(
-                    color = Color.White,
-                    fontSize = 86.sp,
-                    fontWeight = FontWeight.Thin,
-                    letterSpacing = (-2).sp,
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        offset = Offset(0f, 2f),
-                        blurRadius = 8f
-                    )
-                )
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = currentDate,
-                style = TextStyle(
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Light,
-                    letterSpacing = 0.5.sp,
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.4f),
-                        offset = Offset(0f, 1f),
-                        blurRadius = 6f
-                    )
-                )
-            )
-            if (battery >= 0) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "$battery%",
-                    style = TextStyle(
-                        color = batteryColor(battery),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Normal,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.3f),
-                            offset = Offset(0f, 1f),
-                            blurRadius = 4f
+            // clock
+            item(key = "clock") {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = currentTime,
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 86.sp,
+                            fontWeight = FontWeight.Thin,
+                            letterSpacing = (-2).sp,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                offset = Offset(0f, 2f),
+                                blurRadius = 8f
+                            )
                         )
                     )
-                )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = currentDate,
+                        style = TextStyle(
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = 0.5.sp,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.4f),
+                                offset = Offset(0f, 1f),
+                                blurRadius = 6f
+                            )
+                        )
+                    )
+                    if (battery >= 0) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "$battery%",
+                            style = TextStyle(
+                                color = batteryColor(battery),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal,
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.3f),
+                                    offset = Offset(0f, 1f),
+                                    blurRadius = 4f
+                                )
+                            )
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+
+            // widgets
+            if (activity != null && widgetIds.isNotEmpty()) {
+                items(widgetIds, key = { it }) { widgetId ->
+                    WidgetCard(
+                        widgetId = widgetId,
+                        host = activity.appWidgetHost,
+                        manager = activity.appWidgetManager,
+                        onRemove = { viewModel.removeWidgetId(widgetId) }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
 
@@ -289,4 +322,61 @@ private fun batteryColor(level: Int) = when {
 
 private fun getTime(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 private fun getDate(): String = SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date())
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WidgetCard(
+    widgetId: Int,
+    host: AppWidgetHost,
+    manager: AppWidgetManager,
+    onRemove: () -> Unit
+) {
+    val providerInfo = remember(widgetId) { manager.getAppWidgetInfo(widgetId) }
+    var showMenu by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    if (providerInfo != null) {
+        val minH = with(density) { providerInfo.minHeight.dp.coerceAtLeast(80.dp) }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black.copy(alpha = 0.15f))
+                .combinedClickable(
+                    onClick = { },
+                    onLongClick = { showMenu = true }
+                )
+                .padding(4.dp)
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    val hostView = host.createView(ctx, widgetId, providerInfo)
+                    hostView.setAppWidget(widgetId, providerInfo)
+                    hostView.layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    hostView
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(minH)
+            )
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Remove Widget") },
+                    onClick = {
+                        showMenu = false
+                        host.deleteAppWidgetId(widgetId)
+                        onRemove()
+                    }
+                )
+            }
+        }
+    }
+}
 

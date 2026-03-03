@@ -156,6 +156,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         HomeAppsStore.removeApp(getApplication(), packageName)
     }
 
+    // ── Widget support ──
+    val widgetIds: StateFlow<List<Int>> = WidgetStore
+        .getWidgetIds(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun addWidgetId(id: Int) = viewModelScope.launch {
+        WidgetStore.addWidgetId(getApplication(), id)
+    }
+
+    fun removeWidgetId(id: Int) = viewModelScope.launch {
+        WidgetStore.removeWidgetId(getApplication(), id)
+    }
+
     private suspend fun reloadCustomIcons(packUri: String?, overrides: Map<String, String>) =
         withContext(Dispatchers.IO) {
             val ctx = getApplication<Application>()
