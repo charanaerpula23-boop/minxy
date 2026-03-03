@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -110,7 +112,8 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 64.dp),
+                .statusBarsPadding()
+                .padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -146,7 +149,8 @@ fun HomeScreen(
             fontSize = 18.sp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
         )
     }
 }

@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+        window.setBackgroundDrawableResource(android.R.color.transparent)
         setContent {
             MinxyTheme {
                 val vm: AppViewModel = viewModel()
