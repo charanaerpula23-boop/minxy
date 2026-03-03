@@ -53,6 +53,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .getDrawerOpacity(application)
         .stateIn(viewModelScope, SharingStarted.Eagerly, 92)
 
+    // home screen dock apps (ordered package names)
+    private val _homeAppPkgs: StateFlow<List<String>> = HomeAppsStore
+        .getHomeApps(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     // resolved custom icons: override > pack > null
     private val _customIcons = MutableStateFlow<Map<String, ImageBitmap>>(emptyMap())
 
@@ -70,6 +75,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val hiddenAppsList: StateFlow<List<AppInfo>> =
         combine(hiddenApps, _allApps) { hidden, all ->
             all.filter { it.packageName in hidden }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // home screen dock: resolved AppInfo list in order
+    val homeApps: StateFlow<List<AppInfo>> =
+        combine(_homeAppPkgs, _allApps, _customIcons) { pkgs, all, custom ->
+            val byPkg = all.associateBy { it.packageName }
+            pkgs.mapNotNull { pkg ->
+                byPkg[pkg]?.let { app ->
+                    custom[pkg]?.let { app.copy(icon = it) } ?: app
+                }
+            }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
@@ -130,6 +146,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setDrawerOpacity(opacity: Int) = viewModelScope.launch {
         SettingsStore.setDrawerOpacity(getApplication(), opacity)
+    }
+
+    fun addHomeApp(packageName: String) = viewModelScope.launch {
+        HomeAppsStore.addApp(getApplication(), packageName)
+    }
+
+    fun removeHomeApp(packageName: String) = viewModelScope.launch {
+        HomeAppsStore.removeApp(getApplication(), packageName)
     }
 
     private suspend fun reloadCustomIcons(packUri: String?, overrides: Map<String, String>) =

@@ -5,21 +5,36 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,22 +42,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.charanhyper.tech.minxy.AppViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
+    viewModel: AppViewModel,
     onOpenDrawer: () -> Unit,
     onOpenHiddenApps: () -> Unit  // secret: 5-tap top-left
 ) {
@@ -51,6 +74,8 @@ fun HomeScreen(
     var currentDate by remember { mutableStateOf(getDate()) }
     var battery by remember { mutableIntStateOf(-1) }
     var secretTapCount by remember { mutableIntStateOf(0) }
+
+    val homeApps by viewModel.homeApps.collectAsState(initial = emptyList())
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -115,7 +140,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(bottom = 60.dp),
+                .padding(bottom = if (homeApps.isNotEmpty()) 100.dp else 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -165,16 +190,94 @@ fun HomeScreen(
             }
         }
 
-        // swipe-up cue
-        Text(
-            text = "⌃",
-            color = Color.White.copy(alpha = 0.25f),
-            fontSize = 22.sp,
+        // --- Dock: pinned home apps ---
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 12.dp)
-        )
+                .padding(bottom = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (homeApps.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.25f),
+                            RoundedCornerShape(24.dp)
+                        )
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    items(homeApps, key = { it.packageName }) { app ->
+                        var showMenu by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier.width(68.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .combinedClickable(
+                                        onClick = { viewModel.launchApp(app.packageName) },
+                                        onLongClick = { showMenu = true }
+                                    )
+                            ) {
+                                app.icon?.let { icon ->
+                                    Image(
+                                        bitmap = icon,
+                                        contentDescription = app.name,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = app.name,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.5f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 4f
+                                        )
+                                    )
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                offset = DpOffset(0.dp, (-60).dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Remove from Home") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.removeHomeApp(app.packageName)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+            }
+
+            // swipe-up cue
+            Text(
+                text = "⌃",
+                color = Color.White.copy(alpha = 0.25f),
+                fontSize = 22.sp,
+            )
+        }
     }
 }
 

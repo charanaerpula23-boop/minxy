@@ -192,6 +192,7 @@ fun AppDrawer(
                             hasOverride = iconOverrides.containsKey(app.packageName),
                             onClick = { viewModel.launchApp(app.packageName) },
                             onHide = { viewModel.hideApp(app.packageName) },
+                            onAddToHome = { viewModel.addHomeApp(app.packageName) },
                             onChangeIcon = {
                                 pendingIconPkg = app.packageName
                                 imagePicker.launch(arrayOf("image/*"))
@@ -214,6 +215,7 @@ private fun GridAppItem(
     hasOverride: Boolean,
     onClick: () -> Unit,
     onHide: () -> Unit,
+    onAddToHome: () -> Unit,
     onChangeIcon: () -> Unit,
     onResetIcon: () -> Unit,
     modifier: Modifier = Modifier
@@ -267,6 +269,10 @@ private fun GridAppItem(
             DropdownMenuItem(
                 text = { Text("Hide", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) },
                 onClick = { showMenu = false; onHide() }
+            )
+            DropdownMenuItem(
+                text = { Text("Add to Home", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) },
+                onClick = { showMenu = false; onAddToHome() }
             )
             DropdownMenuItem(
                 text = { Text("Change Icon", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) },
