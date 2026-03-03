@@ -39,6 +39,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .getIconOverrides(application)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+    val gridColumns: StateFlow<Int> = SettingsStore
+        .getGridColumns(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 5)
+
+    val iconSizeDp: StateFlow<Int> = SettingsStore
+        .getIconSizeDp(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 52)
+
     // resolved custom bitmaps: override > pack > null (falls back to system icon in AppInfo)
     private val _customIcons = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
 
@@ -98,6 +106,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearAppIcon(packageName: String) = viewModelScope.launch {
         IconStore.clearIconOverride(getApplication(), packageName)
+    }
+
+    fun setGridColumns(columns: Int) = viewModelScope.launch {
+        SettingsStore.setGridColumns(getApplication(), columns)
+    }
+
+    fun setIconSizeDp(size: Int) = viewModelScope.launch {
+        SettingsStore.setIconSizeDp(getApplication(), size)
     }
 
     private suspend fun reloadCustomIcons(packUri: String?, overrides: Map<String, String>) =

@@ -5,8 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.provider.Settings
-import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,20 +39,27 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onOpenDrawer: () -> Unit,
-    onOpenHiddenApps: () -> Unit,
-    onOpenIconPacks: () -> Unit
+    onOpenHiddenApps: () -> Unit  // secret: 5-tap top-left
 ) {
     val context = LocalContext.current
     var currentTime by remember { mutableStateOf(getTime()) }
     var currentDate by remember { mutableStateOf(getDate()) }
     var battery by remember { mutableIntStateOf(-1) }
-    var menuExpanded by remember { mutableStateOf(false) }
+    var secretTapCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
             currentTime = getTime()
             currentDate = getDate()
+        }
+    }
+
+    // reset secret tap count after 2s of inactivity
+    LaunchedEffect(secretTapCount) {
+        if (secretTapCount > 0) {
+            delay(2000)
+            secretTapCount = 0
         }
     }
 
@@ -79,86 +83,70 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            // transparent — wallpaper shows through
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dragAmount ->
                     if (dragAmount < -60f) onOpenDrawer()
                 }
             }
     ) {
-        // center: clock / date / battery
+        // secret 5-tap zone top-left
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .align(Alignment.TopStart)
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        secretTapCount++
+                        if (secretTapCount >= 5) {
+                            secretTapCount = 0
+                            onOpenHiddenApps()
+                        }
+                    }
+                }
+        )
+
+        // clock widget top-center
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = currentTime,
                 color = Color.White,
-                fontSize = 80.sp,
+                fontSize = 72.sp,
                 fontWeight = FontWeight.Thin,
-                letterSpacing = 2.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = currentDate,
-                color = Color(0xFF666666),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Light,
                 letterSpacing = 1.sp
             )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = currentDate,
+                color = Color(0xCCFFFFFF),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Light,
+                letterSpacing = 0.8.sp
+            )
             if (battery >= 0) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "$battery%",
+                    text = "⬡ $battery%",
                     color = batteryColor(battery),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Light,
-                    letterSpacing = 0.5.sp
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light
                 )
             }
         }
 
-        // top-right 3-dots menu
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 8.dp)
-        ) {
-            IconButton(onClick = { menuExpanded = true }) {
-                Text("⋮", color = Color(0xFF555555), fontSize = 22.sp)
-            }
-            DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
-                modifier = Modifier.background(Color(0xFF111111))
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Icon Packs", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
-                    onClick = { menuExpanded = false; onOpenIconPacks() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Hidden Apps", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
-                    onClick = { menuExpanded = false; onOpenHiddenApps() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Super User", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
-                    onClick = {
-                        menuExpanded = false
-                        context.startActivity(
-                            Intent(Settings.ACTION_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                        )
-                    }
-                )
-            }
-        }
-
+        // swipe-up cue
         Text(
-            text = "↑",
-            color = Color(0xFF2A2A2A),
-            fontSize = 20.sp,
+            text = "⌃",
+            color = Color(0x55FFFFFF),
+            fontSize = 18.sp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 30.dp)
+                .padding(bottom = 24.dp)
         )
     }
 }
@@ -166,8 +154,9 @@ fun HomeScreen(
 private fun batteryColor(level: Int) = when {
     level <= 15 -> Color(0xFFFF4444)
     level <= 30 -> Color(0xFFFF9900)
-    else -> Color(0xFF555555)
+    else        -> Color(0xCCFFFFFF)
 }
 
 private fun getTime(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 private fun getDate(): String = SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date())
+
