@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +23,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,9 +46,10 @@ fun SettingsScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val gridColumns by viewModel.gridColumns.collectAsState()
-    val iconSizeDp by viewModel.iconSizeDp.collectAsState()
-    val iconPackUri by viewModel.iconPackUri.collectAsState()
+    val gridColumns    by viewModel.gridColumns.collectAsState()
+    val iconSizeDp     by viewModel.iconSizeDp.collectAsState()
+    val iconPackUri    by viewModel.iconPackUri.collectAsState()
+    val drawerOpacity  by viewModel.drawerOpacity.collectAsState()
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -68,7 +73,8 @@ fun SettingsScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 48.dp, start = 8.dp, end = 16.dp, bottom = 8.dp),
+                .statusBarsPadding()
+                .padding(top = 8.dp, start = 8.dp, end = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
@@ -111,6 +117,59 @@ fun SettingsScreen(
             onIncrement = { if (iconSizeDp < 72) viewModel.setIconSizeDp(iconSizeDp + 4) },
             range = "36 – 72"
         )
+
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider(color = Color(0xFF1A1A1A), modifier = Modifier.padding(horizontal = 20.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // ── Drawer background opacity ──────────────────
+        SectionLabel("Drawer background opacity")
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Transparent",
+                    color = Color(0xFF444444),
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "$drawerOpacity%",
+                    color = Color(0xFF888888),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Light
+                )
+                Text(
+                    text = "Opaque",
+                    color = Color(0xFF444444),
+                    fontSize = 11.sp
+                )
+            }
+            Slider(
+                value = drawerOpacity.toFloat(),
+                onValueChange = { viewModel.setDrawerOpacity(it.toInt()) },
+                valueRange = 0f..100f,
+                steps = 19,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFF888888),
+                    activeTrackColor = Color(0xFF555555),
+                    inactiveTrackColor = Color(0xFF222222)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            // live preview strip
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .background(
+                        Color(0xFF050505).copy(alpha = drawerOpacity / 100f),
+                        RoundedCornerShape(8.dp)
+                    )
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
         HorizontalDivider(color = Color(0xFF1A1A1A), modifier = Modifier.padding(horizontal = 20.dp))

@@ -27,9 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -108,36 +111,56 @@ fun HomeScreen(
                 }
         )
 
-        // clock widget top-center
+        // clock widget — centered vertically like Pixel launcher
         Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 16.dp),
+                .align(Alignment.Center)
+                .padding(bottom = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = currentTime,
-                color = Color.White,
-                fontSize = 72.sp,
-                fontWeight = FontWeight.Thin,
-                letterSpacing = 1.sp
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 86.sp,
+                    fontWeight = FontWeight.Thin,
+                    letterSpacing = (-2).sp,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        offset = Offset(0f, 2f),
+                        blurRadius = 8f
+                    )
+                )
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = currentDate,
-                color = Color(0xCCFFFFFF),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Light,
-                letterSpacing = 0.8.sp
+                style = TextStyle(
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = 0.5.sp,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.4f),
+                        offset = Offset(0f, 1f),
+                        blurRadius = 6f
+                    )
+                )
             )
             if (battery >= 0) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "⬡ $battery%",
-                    color = batteryColor(battery),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Light
+                    text = "$battery%",
+                    style = TextStyle(
+                        color = batteryColor(battery),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        shadow = Shadow(
+                            color = Color.Black.copy(alpha = 0.3f),
+                            offset = Offset(0f, 1f),
+                            blurRadius = 4f
+                        )
+                    )
                 )
             }
         }
@@ -145,20 +168,20 @@ fun HomeScreen(
         // swipe-up cue
         Text(
             text = "⌃",
-            color = Color(0x55FFFFFF),
-            fontSize = 18.sp,
+            color = Color.White.copy(alpha = 0.25f),
+            fontSize = 22.sp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 12.dp)
         )
     }
 }
 
 private fun batteryColor(level: Int) = when {
-    level <= 15 -> Color(0xFFFF4444)
-    level <= 30 -> Color(0xFFFF9900)
-    else        -> Color(0xCCFFFFFF)
+    level <= 15 -> Color(0xFFEF4444)
+    level <= 30 -> Color(0xFFFBBF24)
+    else        -> Color.White.copy(alpha = 0.7f)
 }
 
 private fun getTime(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())

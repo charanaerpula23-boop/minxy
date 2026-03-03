@@ -1,9 +1,9 @@
 package com.charanhyper.tech.minxy
 
-import android.graphics.Bitmap
+import androidx.compose.ui.graphics.ImageBitmap
 
 data class AppInfo(
     val name: String,
     val packageName: String,
-    val icon: Bitmap? = null
+    val icon: ImageBitmap? = null
 )

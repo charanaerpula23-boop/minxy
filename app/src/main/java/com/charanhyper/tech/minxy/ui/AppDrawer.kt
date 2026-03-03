@@ -3,6 +3,9 @@ package com.charanhyper.tech.minxy.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,11 +28,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,9 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +67,7 @@ fun AppDrawer(
     val iconOverrides by viewModel.iconOverrides.collectAsState()
     val columns by viewModel.gridColumns.collectAsState()
     val iconSize by viewModel.iconSizeDp.collectAsState()
+    val opacityPct by viewModel.drawerOpacity.collectAsState()
 
     var menuExpanded by remember { mutableStateOf(false) }
     var pendingIconPkg by remember { mutableStateOf<String?>(null) }
@@ -76,98 +80,126 @@ fun AppDrawer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xEE050505))
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (dragAmount > 80f) onClose()
-                }
-            }
+            .background(Color.Black.copy(alpha = opacityPct / 100f))
     ) {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-
-            // drag pill
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            // ── drag pill ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 14.dp, bottom = 6.dp),
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 50f) onClose()
+                        }
+                    }
+                    .padding(top = 10.dp, bottom = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     Modifier
-                        .width(40.dp)
+                        .width(36.dp)
                         .height(4.dp)
-                        .background(Color(0xFF333333), RoundedCornerShape(2.dp))
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color.White.copy(alpha = 0.2f))
                 )
             }
 
-            // search bar row
+            // ── search bar (pill-shaped, Material You style) ──
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text("🔍", fontSize = 16.sp, modifier = Modifier.padding(end = 12.dp))
+
                 Box(modifier = Modifier.weight(1f)) {
                     BasicTextField(
                         value = query,
                         onValueChange = viewModel::updateSearch,
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Light),
-                        cursorBrush = SolidColor(Color.White),
+                        textStyle = TextStyle(
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        cursorBrush = SolidColor(Color.White.copy(alpha = 0.6f)),
                         decorationBox = { inner ->
-                            Column {
-                                if (query.isEmpty()) {
-                                    Text("Search apps…", color = Color(0xFF444444), fontSize = 15.sp, fontWeight = FontWeight.Light)
-                                }
-                                inner()
-                                Spacer(Modifier.height(4.dp))
-                                HorizontalDivider(color = Color(0xFF2A2A2A), thickness = 1.dp)
+                            if (query.isEmpty()) {
+                                Text(
+                                    "Search apps",
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    fontSize = 16.sp
+                                )
                             }
+                            inner()
                         }
                     )
                 }
-                Spacer(Modifier.width(4.dp))
-                // ⋮ settings menu
+
+                // ⋮ menu
                 Box {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Text("⋮", color = Color(0xFF777777), fontSize = 20.sp)
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Text("⋮", color = Color.White.copy(alpha = 0.45f), fontSize = 18.sp)
                     }
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
-                        modifier = Modifier.background(Color(0xFF111111))
+                        modifier = Modifier
+                            .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Settings", color = Color(0xFFCCCCCC), fontSize = 14.sp) },
+                            text = {
+                                Text("Settings", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp)
+                            },
                             onClick = { menuExpanded = false; onOpenSettings() }
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            // app grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            // ── app grid ──
+            AnimatedVisibility(
+                visible = apps.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                items(apps, key = { it.packageName }) { app ->
-                    GridAppItem(
-                        app = app,
-                        iconSizeDp = iconSize,
-                        hasOverride = iconOverrides.containsKey(app.packageName),
-                        onClick = { viewModel.launchApp(app.packageName) },
-                        onHide = { viewModel.hideApp(app.packageName) },
-                        onChangeIcon = { pendingIconPkg = app.packageName; imagePicker.launch(arrayOf("image/*")) },
-                        onResetIcon = { viewModel.clearAppIcon(app.packageName) }
-                    )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(apps, key = { it.packageName }) { app ->
+                        GridAppItem(
+                            app = app,
+                            iconSizeDp = iconSize,
+                            hasOverride = iconOverrides.containsKey(app.packageName),
+                            onClick = { viewModel.launchApp(app.packageName) },
+                            onHide = { viewModel.hideApp(app.packageName) },
+                            onChangeIcon = {
+                                pendingIconPkg = app.packageName
+                                imagePicker.launch(arrayOf("image/*"))
+                            },
+                            onResetIcon = { viewModel.clearAppIcon(app.packageName) },
+                            modifier = Modifier.animateItem()
+                        )
+                    }
                 }
             }
         }
@@ -183,36 +215,46 @@ private fun GridAppItem(
     onClick: () -> Unit,
     onHide: () -> Unit,
     onChangeIcon: () -> Unit,
-    onResetIcon: () -> Unit
+    onResetIcon: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Box(contentAlignment = Alignment.TopCenter) {
+    Box(contentAlignment = Alignment.TopCenter, modifier = modifier) {
         Column(
             modifier = Modifier
-                .combinedClickable(onClick = onClick, onLongClick = { showMenu = true })
-                .padding(vertical = 10.dp, horizontal = 4.dp),
+                .clip(RoundedCornerShape(16.dp))
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
+                )
+                .padding(vertical = 12.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            app.icon?.let {
+            app.icon?.let { bmp ->
                 Image(
-                    bitmap = it.asImageBitmap(),
+                    bitmap = bmp,
                     contentDescription = app.name,
-                    modifier = Modifier.size(iconSizeDp.dp)
+                    modifier = Modifier
+                        .size(iconSizeDp.dp)
+                        .clip(CircleShape)
                 )
             } ?: Box(
                 modifier = Modifier
                     .size(iconSizeDp.dp)
-                    .background(Color(0xFF222222), RoundedCornerShape(12.dp))
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
             )
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = app.name,
-                color = Color(0xFFDDDDDD),
-                fontSize = 10.sp,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
+                lineHeight = 14.sp,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -220,19 +262,19 @@ private fun GridAppItem(
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
-            modifier = Modifier.background(Color(0xFF1A1A1A))
+            modifier = Modifier.background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
         ) {
             DropdownMenuItem(
-                text = { Text("Hide", color = Color(0xFFCCCCCC), fontSize = 13.sp) },
+                text = { Text("Hide", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) },
                 onClick = { showMenu = false; onHide() }
             )
             DropdownMenuItem(
-                text = { Text("Change Icon", color = Color(0xFFCCCCCC), fontSize = 13.sp) },
+                text = { Text("Change Icon", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) },
                 onClick = { showMenu = false; onChangeIcon() }
             )
             if (hasOverride) {
                 DropdownMenuItem(
-                    text = { Text("Reset Icon", color = Color(0xFF666666), fontSize = 13.sp) },
+                    text = { Text("Reset Icon", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp) },
                     onClick = { showMenu = false; onResetIcon() }
                 )
             }

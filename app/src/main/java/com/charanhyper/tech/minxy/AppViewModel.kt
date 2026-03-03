@@ -9,6 +9,8 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,24 +49,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .getIconSizeDp(application)
         .stateIn(viewModelScope, SharingStarted.Eagerly, 52)
 
-    // resolved custom bitmaps: override > pack > null (falls back to system icon in AppInfo)
-    private val _customIcons = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    val drawerOpacity: StateFlow<Int> = SettingsStore
+        .getDrawerOpacity(application)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 92)
 
-    private val allApps: List<AppInfo> = loadSystemApps()
+    // resolved custom icons: override > pack > null
+    private val _customIcons = MutableStateFlow<Map<String, ImageBitmap>>(emptyMap())
+
+    // loaded asynchronously
+    private val _allApps = MutableStateFlow<List<AppInfo>>(emptyList())
 
     val visibleApps: StateFlow<List<AppInfo>> =
-        combine(_searchQuery, hiddenApps, _customIcons) { query, hidden, custom ->
-            allApps
+        combine(_searchQuery, hiddenApps, _customIcons, _allApps) { query, hidden, custom, all ->
+            all
                 .filter { it.packageName !in hidden }
                 .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
                 .map { app -> custom[app.packageName]?.let { app.copy(icon = it) } ?: app }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val hiddenAppsList: StateFlow<List<AppInfo>> = hiddenApps.map { hidden ->
-        allApps.filter { it.packageName in hidden }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val hiddenAppsList: StateFlow<List<AppInfo>> =
+        combine(hiddenApps, _allApps) { hidden, all ->
+            all.filter { it.packageName in hidden }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
+        // load apps off the main thread
+        viewModelScope.launch(Dispatchers.IO) {
+            _allApps.value = loadSystemApps()
+        }
         viewModelScope.launch {
             combine(iconPackUri, iconOverrides) { pack, overrides -> pack to overrides }
                 .collect { (pack, overrides) -> reloadCustomIcons(pack, overrides) }
@@ -116,11 +128,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         SettingsStore.setIconSizeDp(getApplication(), size)
     }
 
+    fun setDrawerOpacity(opacity: Int) = viewModelScope.launch {
+        SettingsStore.setDrawerOpacity(getApplication(), opacity)
+    }
+
     private suspend fun reloadCustomIcons(packUri: String?, overrides: Map<String, String>) =
         withContext(Dispatchers.IO) {
             val ctx = getApplication<Application>()
-            val result = mutableMapOf<String, Bitmap>()
-            // load icon pack folder
+            val result = mutableMapOf<String, ImageBitmap>()
             if (packUri != null) {
                 try {
                     DocumentFile.fromTreeUri(ctx, Uri.parse(packUri))
@@ -129,16 +144,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             val pkg = file.name?.substringBeforeLast(".") ?: return@forEach
                             val bmp = ctx.contentResolver.openInputStream(file.uri)
                                 ?.use { BitmapFactory.decodeStream(it) }
-                            if (bmp != null) result[pkg] = bmp
+                            if (bmp != null) result[pkg] = scaleBitmap(bmp).asImageBitmap()
                         }
                 } catch (_: Exception) { }
             }
-            // per-app overrides (higher priority, overwrite pack)
             overrides.forEach { (pkg, uriStr) ->
                 try {
                     val bmp = ctx.contentResolver.openInputStream(Uri.parse(uriStr))
                         ?.use { BitmapFactory.decodeStream(it) }
-                    if (bmp != null) result[pkg] = bmp
+                    if (bmp != null) result[pkg] = scaleBitmap(bmp).asImageBitmap()
                 } catch (_: Exception) { }
             }
             _customIcons.value = result
@@ -149,7 +163,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
         return pm.queryIntentActivities(intent, PackageManager.GET_META_DATA)
             .map { ri ->
-                val icon = try { drawableToBitmap(pm.getApplicationIcon(ri.activityInfo.packageName)) } catch (_: Exception) { null }
+                val icon = try {
+                    drawableToBitmap(pm.getApplicationIcon(ri.activityInfo.packageName)).asImageBitmap()
+                } catch (_: Exception) { null }
                 AppInfo(ri.loadLabel(pm).toString(), ri.activityInfo.packageName, icon)
             }
             .filter { it.packageName != "com.charanhyper.tech.minxy" }
@@ -157,13 +173,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
-        if (drawable is BitmapDrawable) return drawable.bitmap
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            return scaleBitmap(drawable.bitmap)
+        }
         val w = drawable.intrinsicWidth.coerceAtLeast(1)
         val h = drawable.intrinsicHeight.coerceAtLeast(1)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         drawable.setBounds(0, 0, w, h)
         drawable.draw(canvas)
-        return bmp
+        return scaleBitmap(bmp)
+    }
+
+    private fun scaleBitmap(src: Bitmap, maxPx: Int = 108): Bitmap {
+        val w = src.width
+        val h = src.height
+        if (w <= maxPx && h <= maxPx) return src
+        val ratio = maxPx.toFloat() / maxOf(w, h)
+        val nw = (w * ratio).toInt().coerceAtLeast(1)
+        val nh = (h * ratio).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(src, nw, nh, true)
     }
 }
